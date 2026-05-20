@@ -6,6 +6,8 @@ from flask import Flask, render_template, request, jsonify
 import pandas as pd
 import json
 from datetime import datetime
+from scipy import stats as scipy_stats
+import numpy as np
 
 app = Flask(__name__)
 
@@ -232,7 +234,225 @@ def not_found(e):
 @app.errorhandler(500)
 def server_error(e):
     return "500 - Error del servidor", 500
-
+def calcular_indice_riesgo(row):
+    """
+    Indice ponderado 0-100 con 4 variables del dataset.
+    Pesos alineados con el objetivo especifico 5 del articulo.
+    """
+    # Normalizar cada variable a escala 0-1 sobre rangos reales Colombia
+    d_norm  = min(row['Tasa_Desercion_Femenina'] / 10.0, 1.0)       # max ~10%
+    f_norm  = min(row['Tasa_Fecundidad_Adolescente'] / 100.0, 1.0)  # max ~100 x1000
+    p_norm  = min(row.get('Tasa_Pobreza', 50) / 80.0, 1.0)          # max ~80%
+    e_norm  = 1 - min(row.get('Cobertura_Edu_Sexual', 50) / 100.0, 1.0)  # inverso
+ 
+    # Pesos academicamente justificados
+    indice = (d_norm * 0.35 + f_norm * 0.35 + p_norm * 0.15 + e_norm * 0.15) * 100
+    return round(indice, 1)
+ 
+ 
+def nivel_riesgo(indice):
+    if indice >= 65: return 'Critico'
+    if indice >= 45: return 'Alto'
+    if indice >= 25: return 'Medio'
+    return 'Bajo'
+ 
+ 
+def color_riesgo(nivel):
+    return {'Critico': '#c62828', 'Alto': '#e65100',
+            'Medio':   '#f57f17', 'Bajo': '#2e7d32'}.get(nivel, '#607d8b')
+ 
+ 
+def generar_recomendacion(row, nivel):
+    """
+    Recomendacion de politica publica personalizada segun perfil.
+    Basada en el objetivo especifico 5 del articulo IEEE.
+    """
+    zona    = row.get('Zona', 'Mixta')
+    cobert  = row.get('Cobertura_Edu_Sexual', 50)
+    progr   = row.get('Programa_Retencion', 'No')
+    fec     = row['Tasa_Fecundidad_Adolescente']
+    deser   = row['Tasa_Desercion_Femenina']
+ 
+    acciones = []
+ 
+    if nivel == 'Critico':
+        acciones.append('Intervencion intersectorial urgente MEN-MinSalud-secretarias departamentales.')
+        if str(progr).lower() in ['no', 'false', '0', 'nan']:
+            acciones.append('Implementar programa de retencion escolar con modalidad hibrida inmediatamente.')
+        if cobert < 50:
+            acciones.append('Desplegar brigadas moviles de educacion sexual en instituciones educativas.')
+        if 'Rural' in str(zona) or 'rural' in str(zona):
+            acciones.append('Habilitar aulas satelite y educacion a distancia para zonas de alta dispersion.')
+ 
+    elif nivel == 'Alto':
+        acciones.append('Fortalecer programas de prevencion del embarazo en colegios de secundaria.')
+        if deser > 4.5:
+            acciones.append('Ampliar cupos en programas de madres gestantes y lactantes en instituciones educativas.')
+        if fec > 55:
+            acciones.append('Articular con secretaria de salud para ampliar cobertura de salud reproductiva.')
+ 
+    elif nivel == 'Medio':
+        acciones.append('Monitorear indicadores trimestralmente via SIMAT para detectar deterioro.')
+        acciones.append('Fortalecer red de apoyo psicosocial en instituciones educativas.')
+        if str(progr).lower() in ['no', 'false', '0', 'nan']:
+            acciones.append('Evaluar implementacion de programa piloto de retencion escolar.')
+ 
+    else:  # Bajo
+        acciones.append('Mantener programas vigentes y replicar buenas practicas en departamentos criticos.')
+        acciones.append('Documentar estrategias exitosas para transferencia de conocimiento interterritorial.')
+ 
+    return acciones
+ 
+ 
+def predecir_2027(serie_valores, anios):
+    """
+    Regresion lineal simple sobre los 4 años disponibles.
+    Retorna prediccion para 2027 con intervalo de confianza 95%.
+    """
+    if len(serie_valores) < 3:
+        return None, None, None
+ 
+    x = np.array(anios, dtype=float)
+    y = np.array(serie_valores, dtype=float)
+ 
+    slope, intercept, r_value, p_value, std_err = scipy_stats.linregress(x, y)
+    pred_2027 = round(slope * 2027 + intercept, 2)
+ 
+    # Intervalo de confianza simplificado (±2*std_err * t_critico)
+    n = len(x)
+    t_crit = 2.776 if n == 4 else 3.182  # t al 95% para n=4 y n=3
+    margen = round(t_crit * std_err, 2)
+ 
+    return max(0, pred_2027), max(0, pred_2027 - margen), pred_2027 + margen
+ 
+ 
+# ---------- endpoint ----------
+ 
+@app.route('/api/riesgo', methods=['GET'])
+def get_riesgo():
+    """
+    Modelo de clasificacion de riesgo y prediccion 2027.
+ 
+    Parametros opcionales:
+      - nivel: filtrar por nivel de riesgo (Critico / Alto / Medio / Bajo)
+      - zona:  filtrar por zona (Rural / Mixta / Urbana)
+ 
+    Respuesta:
+      {
+        "resumen": { conteos por nivel, stats },
+        "departamentos": [ lista ordenada por indice desc ],
+        "predicciones_2027": [ lista de predicciones lineales ]
+      }
+    """
+    if df is None:
+        return jsonify({'error': 'Dataset no cargado'}), 500
+ 
+    filtro_nivel = request.args.get('nivel', None)
+    filtro_zona  = request.args.get('zona',  None)
+ 
+    # --- Paso 1: promedio 2023-2026 por departamento ---
+    cols_agg = {
+        'Tasa_Desercion_Femenina':    'mean',
+        'Tasa_Fecundidad_Adolescente':'mean',
+        'Desertoras_Estimadas':       'sum',
+        'Nacimientos_15_19':          'sum',
+        'Nacimientos_10_14':          'sum',
+        'Cobertura_Edu_Sexual':       'mean',
+        'Tasa_Pobreza':               'mean',
+        'Indice_Vulnerabilidad':      'mean',
+    }
+    # Solo agregar columnas que existan en el df
+    cols_agg = {k: v for k, v in cols_agg.items() if k in df.columns}
+ 
+    # Zona y Programa_Retencion: primer valor por departamento
+    df_prom = df.groupby(DEPTO_COL).agg(cols_agg).reset_index()
+ 
+    for col in ['Zona', 'Programa_Retencion']:
+        if col in df.columns:
+            primeros = df.groupby(DEPTO_COL)[col].first().reset_index()
+            df_prom = df_prom.merge(primeros, on=DEPTO_COL, how='left')
+ 
+    # --- Paso 2: calcular indice y nivel ---
+    df_prom['indice_riesgo'] = df_prom.apply(calcular_indice_riesgo, axis=1)
+    df_prom['nivel_riesgo']  = df_prom['indice_riesgo'].apply(nivel_riesgo)
+    df_prom['color']         = df_prom['nivel_riesgo'].apply(color_riesgo)
+    df_prom['recomendaciones'] = df_prom.apply(
+        lambda r: generar_recomendacion(r, r['nivel_riesgo']), axis=1
+    )
+ 
+    # --- Paso 3: prediccion 2027 por regresion lineal ---
+    anios_disp = sorted(df[YEAR_COL].unique())
+    predicciones = []
+    for dept in df[DEPTO_COL].unique():
+        serie = df[df[DEPTO_COL] == dept].sort_values(YEAR_COL)
+        vals_d = serie['Tasa_Desercion_Femenina'].tolist()
+        vals_f = serie['Tasa_Fecundidad_Adolescente'].tolist()
+ 
+        pred_d, lo_d, hi_d = predecir_2027(vals_d, anios_disp)
+        pred_f, lo_f, hi_f = predecir_2027(vals_f, anios_disp)
+ 
+        nivel = df_prom[df_prom[DEPTO_COL] == dept]['nivel_riesgo'].values
+        nivel = nivel[0] if len(nivel) else 'Medio'
+ 
+        predicciones.append({
+            'departamento': dept,
+            'nivel_riesgo': nivel,
+            'prediccion_desercion_2027': pred_d,
+            'ic_inferior_desercion': round(lo_d, 2) if lo_d else None,
+            'ic_superior_desercion': round(hi_d, 2) if hi_d else None,
+            'prediccion_fecundidad_2027': pred_f,
+            'ic_inferior_fecundidad': round(lo_f, 2) if lo_f else None,
+            'ic_superior_fecundidad': round(hi_f, 2) if hi_f else None,
+            'tendencia': 'Mejora' if (pred_d and pred_d < vals_d[-1]) else 'Deterioro',
+        })
+ 
+    # --- Paso 4: filtros opcionales ---
+    resultado = df_prom.copy()
+    if filtro_nivel:
+        resultado = resultado[resultado['nivel_riesgo'] == filtro_nivel]
+    if filtro_zona and 'Zona' in resultado.columns:
+        resultado = resultado[resultado['Zona'].str.contains(filtro_zona, case=False, na=False)]
+ 
+    # --- Paso 5: serializar ---
+    depts_list = []
+    for _, row in resultado.sort_values('indice_riesgo', ascending=False).iterrows():
+        d = {
+            'departamento':             row[DEPTO_COL],
+            'indice_riesgo':            row['indice_riesgo'],
+            'nivel_riesgo':             row['nivel_riesgo'],
+            'color':                    row['color'],
+            'tasa_desercion_prom':      round(row['Tasa_Desercion_Femenina'], 2),
+            'tasa_fecundidad_prom':     round(row['Tasa_Fecundidad_Adolescente'], 1),
+            'desertoras_acumuladas':    int(row.get('Desertoras_Estimadas', 0)),
+            'nacimientos_adol_acum':    int(row.get('Nacimientos_15_19', 0) + row.get('Nacimientos_10_14', 0)),
+            'cobertura_edu_sexual':     round(row.get('Cobertura_Edu_Sexual', 0), 1),
+            'tasa_pobreza':             round(row.get('Tasa_Pobreza', 0), 1),
+            'indice_vulnerabilidad':    round(row.get('Indice_Vulnerabilidad', 0), 3),
+            'zona':                     str(row.get('Zona', 'N/D')),
+            'programa_retencion':       str(row.get('Programa_Retencion', 'No')),
+            'recomendaciones':          row['recomendaciones'],
+        }
+        depts_list.append(d)
+ 
+    # Resumen por nivel
+    conteos = df_prom['nivel_riesgo'].value_counts().to_dict()
+ 
+    return jsonify({
+        'success': True,
+        'total_departamentos': len(df_prom),
+        'filtros_aplicados': {'nivel': filtro_nivel, 'zona': filtro_zona},
+        'resumen': {
+            'critico': conteos.get('Critico', 0),
+            'alto':    conteos.get('Alto', 0),
+            'medio':   conteos.get('Medio', 0),
+            'bajo':    conteos.get('Bajo', 0),
+            'indice_promedio_nacional': round(df_prom['indice_riesgo'].mean(), 1),
+            'dept_mas_critico': df_prom.loc[df_prom['indice_riesgo'].idxmax(), DEPTO_COL],
+            'dept_menos_critico': df_prom.loc[df_prom['indice_riesgo'].idxmin(), DEPTO_COL],
+        },
+        'departamentos': depts_list,
+        'predicciones_2027': sorted(predicciones, key=lambda x: x.get('prediccion_desercion_2027') or 0, reverse=True),
+    })
 if __name__ == '__main__':
     print("\n" + "="*60)
     print("  Dashboard Deserción & Embarazo Adolescente – Colombia")
