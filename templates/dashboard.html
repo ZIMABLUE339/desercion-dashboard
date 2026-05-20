@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Deserción Escolar & Embarazo Adolescente – Colombia 2023–2026</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+
+  :root {
+    --primary: #4e73df;
+    --primary-light: #eaecf4;
+    --accent: #1cc88a;
+    --accent2: #f6c23e;
+    --success: #36b9cc;
+    --bg: #f8f9fc;
+    --card-bg: #ffffff;
+    --text: #858796;
+    --text-dark: #5a5c69;
+    --border: #e3e6f0;
+    --shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+  }
+  
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'Nunito', sans-serif; margin: 0; }
+
+  /* HEADER */
+  .topbar {
+    background: #ffffff;
+    color: var(--text-dark);
+    padding: 1rem 1.5rem;
+    display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    z-index: 10; position: relative;
+  }
+  .topbar-icon { font-size: 2rem; }
+  .topbar h1 { margin: 0; font-size: 1.2rem; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05rem; }
+  .topbar p  { margin: 2px 0 0; font-size: 0.85rem; font-weight: 600; }
+  .badge-periodo {
+    margin-left: auto; background: var(--primary-light); color: var(--primary);
+    padding: 6px 16px; border-radius: 20px; font-size: .85rem; font-weight: 800;
+  }
+
+  /* LAYOUT */
+  .main-wrap { display: flex; min-height: calc(100vh - 74px); }
+  .sidebar {
+    width: 280px; min-width: 250px; background: #ffffff;
+    border-right: 1px solid var(--border); padding: 25px 20px;
+    display: flex; flex-direction: column; gap: 28px;
+    box-shadow: 0.15rem 0 1.75rem 0 rgba(58, 59, 69, 0.15);
+    z-index: 9;
+  }
+  .sidebar h6 { font-size: .75rem; font-weight: 800; text-transform: uppercase; color: #b7b9cc; margin: 0 0 5px; }
+  .sidebar select, .sidebar input {
+    width: 100%; border: 1px solid #d1d3e2; border-radius: 0.35rem;
+    padding: 10px 12px; font-size: .85rem; color: #6e707e;
+    transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+  }
+  .sidebar select:focus { border-color: #bac8f3; box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25); outline: none; }
+  .btn-apply {
+    background: var(--primary); color: #fff; border: none; border-radius: 0.35rem;
+    padding: 10px; font-weight: 700; cursor: pointer; transition: 0.2s;
+  }
+  .btn-apply:hover { background: #2e59d9; box-shadow: 0 0.25rem 0.5rem rgba(78, 115, 223, 0.5); }
+  .btn-reset { background: #858796; color: #fff; border: none; border-radius: 0.35rem; padding: 10px; font-weight: 700; cursor: pointer; }
+  .btn-reset:hover { background: #717384; }
+
+  /* CONTENT & CARDS */
+  .content { flex: 1; padding: 25px; overflow-y: auto; }
+  .chart-card, .kpi, .table-card, .compare-section {
+    background: var(--card-bg); border-radius: 1rem;
+    box-shadow: var(--shadow); border: 1px solid var(--border);
+  }
+  .chart-card { padding: 20px; margin-bottom: 25px; }
+  .chart-title { font-size: 1rem; font-weight: 800; color: var(--text-dark); margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+
+  /* KPI GRID */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px; }
+  .kpi { padding: 20px; border-left: 0.25rem solid var(--primary); display: flex; flex-direction: column; justify-content: center; }
+  .kpi.accent  { border-left-color: var(--accent); }
+  .kpi.accent2 { border-left-color: var(--accent2); }
+  .kpi.success { border-left-color: var(--success); }
+  .kpi-label { font-size: .75rem; font-weight: 800; color: var(--primary); text-transform: uppercase; margin-bottom: 5px;}
+  .kpi.accent .kpi-label { color: var(--accent); }
+  .kpi.accent2 .kpi-label { color: var(--accent2); }
+  .kpi.success .kpi-label { color: var(--success); }
+  .kpi-value { font-size: 2rem; font-weight: 800; color: var(--text-dark); line-height: 1.2; }
+  .kpi-sub { font-size: .8rem; color: #b7b9cc; font-weight: 600; margin-top: 5px; }
+
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
+  .chart-card.full { grid-column: 1 / -1; }
+  .chart-wrap { position: relative; height: 280px; }
+  .chart-wrap.tall { height: 350px; }
+
+  /* TABLE */
+  .table-card { padding: 20px; margin-bottom: 25px; }
+  .table-responsive { max-height: 400px; overflow-y: auto; border-radius: 0.5rem; }
+  table { width: 100%; border-collapse: collapse; font-size: .85rem; color: var(--text-dark); }
+  thead th { background: #f8f9fc; color: #858796; padding: 12px; font-weight: 800; text-transform: uppercase; font-size: 0.75rem; position: sticky; top: 0; z-index: 1; border-bottom: 2px solid var(--border); }
+  tbody td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tbody tr:hover { background: #eaecf4; }
+  
+  .badge-zone { padding: 4px 10px; border-radius: 20px; font-size: .75rem; font-weight: 700; }
+  .badge-zone.rural  { background: #ffeeba; color: #856404; }
+  .badge-zone.urbana { background: #cce5ff; color: #004085; }
+  .badge-zone.mixta  { background: #d4edda; color: #155724; }
+
+  /* OTROS */
+  .btn-compare { background: var(--primary); color: #fff; border: none; border-radius: 0.35rem; padding: 8px 16px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+  .btn-compare:hover { background: #2e59d9; }
+  .btn-export { background: var(--accent); color: #fff; border: none; border-radius: 0.35rem; padding: 6px 14px; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
+  .btn-export:hover { background: #17a673; }
+  
+  .alert-info-custom { background: #e2e3e5; border-left: 4px solid #6c757d; border-radius: 0.35rem; padding: 15px; font-size: .9rem; color: #383d41; margin-bottom: 20px; font-weight: 600; }
+  
+  .compare-section { padding: 20px; margin-bottom: 25px; }
+  .compare-inputs { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 20px; }
+  .compare-inputs .f-group { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 140px; }
+  .compare-inputs label { font-size: .75rem; color: var(--text-dark); font-weight: 800; text-transform: uppercase; }
+  .compare-inputs select { border: 1px solid #d1d3e2; border-radius: 0.35rem; padding: 8px 12px; font-size: .85rem; color: #6e707e; outline: none; }
+  .compare-inputs select:focus { border-color: #bac8f3; }
+
+  /* CORRELATION BADGE */
+  .corr-badge { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: .8rem; font-weight: 800; }
+  .corr-high { background: #e8f4f8; color: var(--success); }
+  .corr-mid  { background: #fdf6e3; color: var(--accent2); }
+  .corr-low  { background: #f4f5f8; color: var(--text); }
+
+  /* LOADING */
+  .loader { display:none; text-align:center; padding:30px; color: var(--text); }
+  .spinner { width:32px; height:32px; border:4px solid var(--primary-light); border-top-color:var(--primary); border-radius:50%; animation:spin .8s linear infinite; margin:0 auto 10px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  @media (max-width: 900px) {
+    .main-wrap { flex-direction: column; }
+    .sidebar { width: 100%; border-right: none; flex-direction: row; flex-wrap: wrap; }
+    .charts-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+
+  <div>
+    <h1>Deserción Escolar & Embarazo Adolescente</h1>
+    <p>Análisis Estadístico – Metodología SEMMA</p>
+  </div>
+  <span class="badge-periodo"><i class="bi bi-calendar3"></i> Colombia 2023–2026</span>
+</div>
+
+<div class="main-wrap">
+
+  <aside class="sidebar">
+    <div>
+      <h6><i class="bi bi-funnel-fill"></i> Filtros de Datos</h6>
+      <select id="f-depto" style="margin-top: 5px;">
+        <option value="">— Todos los Deptos —</option>
+        {% for d in deptos %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <select id="f-year">
+        <option value="">— Todos los Años —</option>
+        {% for y in years %}<option value="{{ y }}">{{ y }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <select id="f-zona">
+        <option value="">— Todas las Zonas —</option>
+        {% for z in zonas %}<option value="{{ z }}">{{ z }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <select id="f-indicator">
+        <option value="">— Todos los Indicadores —</option>
+        {% for ind in indicators %}
+        <option value="{{ ind }}">{{ ind.replace('_',' ') }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn-apply" onclick="applyFilters()"><i class="bi bi-search"></i> Aplicar Filtros</button>
+    <button class="btn-reset" onclick="resetFilters()"><i class="bi bi-x-circle"></i> Limpiar</button>
+  </aside>
+
+  <main class="content">
+
+    <div class="kpi-grid" id="kpi-grid">
+      <div class="kpi"><span class="kpi-label">Total Desertoras</span><span class="kpi-value" id="kpi-desertoras">–</span><span class="kpi-sub">Secundaria (Acumulado)</span></div>
+      <div class="kpi accent"><span class="kpi-label">Nacimientos (15–19 años)</span><span class="kpi-value" id="kpi-nac1519">–</span><span class="kpi-sub">Estadísticas Vitales</span></div>
+      <div class="kpi accent2"><span class="kpi-label">Deserción Promedio</span><span class="kpi-value" id="kpi-tasa-des">–</span><span class="kpi-sub">% de la matrícula oficial</span></div>
+      <div class="kpi success"><span class="kpi-label">Fecundidad Promedio</span><span class="kpi-value" id="kpi-tasa-fec">–</span><span class="kpi-sub">x 1.000 adolescentes</span></div>
+    </div>
+
+    <div class="alert-info-custom" id="alerta-depto" style="display:none">
+      <i class="bi bi-info-circle-fill"></i> <span id="alerta-texto"></span>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title"><i class="bi bi-bar-chart-fill" style="color:var(--primary)"></i> Tasa de Deserción Femenina</div>
+        <div class="chart-wrap"><canvas id="chartDesercion"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title"><i class="bi bi-heart-pulse-fill" style="color:var(--accent)"></i> Tasa de Fecundidad Adolescente</div>
+        <div class="chart-wrap"><canvas id="chartFecundidad"></canvas></div>
+      </div>
+      <div class="chart-card full">
+        <div class="chart-title"><i class="bi bi-scatter-chart" style="color:var(--accent2)"></i> Dispersión: Deserción vs Fecundidad</div>
+        <div class="chart-wrap tall"><canvas id="chartScatter"></canvas></div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title" style="justify-content:space-between">
+        <span><i class="bi bi-graph-up" style="color:var(--success)"></i> Evolución Temporal (2023–2026)</span>
+        <select id="trend-depto" onchange="loadTrend()" style="border:1px solid #d1d3e2;border-radius:0.35rem;padding:6px 12px;font-size:.85rem;color:#6e707e;outline:none;">
+          {% for d in deptos %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="chart-wrap tall"><canvas id="chartTrend"></canvas></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title"><i class="bi bi-link-45deg" style="color:var(--primary)"></i> Coeficiente de Correlación de Pearson Anual</div>
+      <div id="corr-badges" style="margin-bottom:15px;display:flex;gap:10px;flex-wrap:wrap"></div>
+      <div class="chart-wrap"><canvas id="chartCorr"></canvas></div>
+    </div>
+
+    <div class="compare-section">
+      <div class="chart-title"><i class="bi bi-arrows-collapse" style="color:var(--accent)"></i> Análisis Comparativo Regional</div>
+      <div class="compare-inputs">
+        <div class="f-group">
+          <label>Departamento 1</label>
+          <select id="cmp-d1">{% for d in deptos %}<option value="{{ d }}">{{ d }}</option>{% endfor %}</select>
+        </div>
+        <div class="f-group">
+          <label>Departamento 2</label>
+          <select id="cmp-d2">{% for d in deptos %}<option value="{{ d }}" {% if loop.index==2 %}selected{% endif %}>{{ d }}</option>{% endfor %}</select>
+        </div>
+        <div class="f-group">
+          <label>Año</label>
+          <select id="cmp-year">
+            <option value="">Todos</option>
+            {% for y in years %}<option value="{{ y }}">{{ y }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="f-group">
+          <label>Indicador</label>
+          <select id="cmp-ind">
+            {% for ind in indicators %}<option value="{{ ind }}">{{ ind.replace('_',' ') }}</option>{% endfor %}
+          </select>
+        </div>
+        <button class="btn-compare" onclick="runCompare()"><i class="bi bi-bar-chart-steps"></i> Comparar</button>
+      </div>
+      <div class="chart-wrap"><canvas id="chartCompare"></canvas></div>
+    </div>
+
+    <div class="table-card">
+      <div class="chart-title" style="justify-content: space-between;">
+        <span><i class="bi bi-table" style="color:var(--primary)"></i> Registros de la Base de Datos <span style="font-size:.75rem;color:var(--text);margin-left:10px" id="table-count"></span></span>
+        <button class="btn-export" onclick="exportTableToCSV('datos_investigacion.csv')"><i class="bi bi-download"></i> Exportar CSV</button>
+      </div>
+      <div class="loader" id="loader"><div class="spinner"></div>Cargando datos…</div>
+      <div class="table-responsive">
+        <table id="main-table">
+          <thead>
+            <tr>
+              <th>Departamento</th><th>Año</th><th>Zona</th>
+              <th>Deserción %</th><th>Fecundidad x1000</th>
+              <th>Desertoras</th><th>Nac. 15–19</th>
+              <th>Edu. Sexual %</th><th>Pobreza %</th>
+              <th>Retención</th>
+            </tr>
+          </thead>
+          <tbody id="table-body">
+            <tr><td colspan="10" style="text-align:center;color:var(--text);padding:20px">Aplica filtros para ver los datos</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const INDICATOR_LABELS = {{ indicator_labels|safe }};
+let chartDesercion, chartFecundidad, chartScatter, chartTrend, chartCompare, chartCorr;
+
+// Configuración común para ejes limpios
+const commonScales = {
+  x: { grid: { display: false }, ticks: { font: { family: "'Nunito', sans-serif", weight: 'bold' } } },
+  y: { beginAtZero: true, border: { dash: [4, 4] }, grid: { color: '#eaecf4' }, ticks: { font: { family: "'Nunito', sans-serif" } } }
+};
+
+document.addEventListener('DOMContentLoaded', () => { loadStats(); loadCorrelation(); applyFilters(); loadTrend(); });
+
+async function loadStats() {
+  const r = await fetch('/api/statistics'); const s = await r.json();
+  document.getElementById('kpi-desertoras').textContent = s.total_desertoras?.toLocaleString('es-CO') ?? '–';
+  document.getElementById('kpi-nac1519').textContent = s.total_nac_15_19?.toLocaleString('es-CO') ?? '–';
+  document.getElementById('kpi-tasa-des').textContent = (s.avg_tasa_desercion ?? '–') + '%';
+  document.getElementById('kpi-tasa-fec').textContent = s.avg_fecundidad ?? '–';
+  if (s.depto_mayor_desercion) {
+    document.getElementById('alerta-depto').style.display = 'block';
+    document.getElementById('alerta-texto').innerHTML = `<b>Atención:</b> <b>${s.depto_mayor_desercion}</b> registra la mayor tasa de deserción, y <b>${s.depto_mayor_fecundidad}</b> la mayor fecundidad adolescente.`;
+  }
+}
+
+async function applyFilters() {
+  const params = new URLSearchParams({
+    depto: document.getElementById('f-depto').value, year: document.getElementById('f-year').value,
+    zona: document.getElementById('f-zona').value, indicator: document.getElementById('f-indicator').value
+  });
+  document.getElementById('loader').style.display = 'block';
+  document.getElementById('table-body').innerHTML = '';
+  
+  try {
+    const r = await fetch('/api/data?' + params); const j = await r.json();
+    document.getElementById('loader').style.display = 'none';
+    if (!j.success || !j.data.length) {
+      document.getElementById('table-body').innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px">Sin datos</td></tr>'; return;
+    }
+    document.getElementById('table-count').textContent = `(${j.rows} filas)`;
+    const tbody = document.getElementById('table-body'); tbody.innerHTML = '';
+    j.data.forEach(row => {
+      const v = row.values || {}; const zonaClass = row.zona.toLowerCase().includes('rural') ? 'rural' : row.zona.toLowerCase().includes('urban') ? 'urbana' : 'mixta';
+      tbody.innerHTML += `<tr><td><b>${row.departamento}</b></td><td>${row.year}</td><td><span class="badge-zone ${zonaClass}">${row.zona}</span></td>
+        <td>${fmt(v.Tasa_Desercion_Femenina)}%</td><td>${fmt(v.Tasa_Fecundidad_Adolescente)}</td><td>${fmtInt(v.Desertoras_Estimadas)}</td>
+        <td>${fmtInt(v.Nacimientos_15_19)}</td><td>${fmt(v.Cobertura_Edu_Sexual)}%</td><td>${fmt(v.Tasa_Pobreza)}%</td><td>${v.Programa_Retencion ?? '–'}</td></tr>`;
+    });
+    renderDesercionChart(j.data); renderFecundidadChart(j.data); renderScatter(j.data);
+  } catch(e) { document.getElementById('loader').style.display = 'none'; console.error(e); }
+}
+
+function resetFilters() { ['f-depto','f-year','f-zona','f-indicator'].forEach(id => document.getElementById(id).value = ''); applyFilters(); }
+
+function renderDesercionChart(data) {
+  const labels = data.map(d => `${d.departamento} ${d.year}`); const values = data.map(d => d.values?.Tasa_Desercion_Femenina ?? null);
+  if (chartDesercion) chartDesercion.destroy();
+  chartDesercion = new Chart(document.getElementById('chartDesercion'), {
+    type: 'bar', data: { labels, datasets: [{ label: 'Deserción (%)', data: values, backgroundColor: '#4e73df', borderRadius: 6, borderSkipped: false }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales: commonScales }
+  });
+}
+
+function renderFecundidadChart(data) {
+  const labels = data.map(d => `${d.departamento} ${d.year}`); const values = data.map(d => d.values?.Tasa_Fecundidad_Adolescente ?? null);
+  if (chartFecundidad) chartFecundidad.destroy();
+  chartFecundidad = new Chart(document.getElementById('chartFecundidad'), {
+    type: 'bar', data: { labels, datasets: [{ label: 'Fecundidad (x1000)', data: values, backgroundColor: '#1cc88a', borderRadius: 6, borderSkipped: false }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales: commonScales }
+  });
+}
+
+function renderScatter(data) {
+  const points = data.filter(d => d.values?.Tasa_Desercion_Femenina != null && d.values?.Tasa_Fecundidad_Adolescente != null)
+    .map(d => ({ x: d.values.Tasa_Fecundidad_Adolescente, y: d.values.Tasa_Desercion_Femenina, label: d.departamento }));
+  if (chartScatter) chartScatter.destroy();
+  chartScatter = new Chart(document.getElementById('chartScatter'), {
+    type: 'scatter', data: { datasets: [{ label: 'Dpto', data: points, backgroundColor: '#f6c23e', pointRadius: 7, pointHoverRadius: 10 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} },
+      scales: { x: { ...commonScales.x, title:{display:true, text:'Fecundidad (x1000)'} }, y: { ...commonScales.y, title:{display:true, text:'Deserción (%)'} } } }
+  });
+}
+
+async function loadTrend() {
+  const depto = document.getElementById('trend-depto').value; if (!depto) return;
+  const r = await fetch('/api/trend?depto=' + encodeURIComponent(depto)); const d = await r.json();
+  if (d.error) return;
+  if (chartTrend) chartTrend.destroy();
+  chartTrend = new Chart(document.getElementById('chartTrend'), {
+    type: 'line', data: { labels: d.years, datasets: [
+        { label: 'Deserción (%)', data: d.desercion, borderColor: '#4e73df', backgroundColor: 'rgba(78, 115, 223, 0.1)', tension: 0.4, fill: true, yAxisID: 'y' },
+        { label: 'Fecundidad', data: d.fecundidad, borderColor: '#1cc88a', backgroundColor: 'rgba(28, 200, 138, 0.1)', tension: 0.4, fill: true, yAxisID: 'y1' }
+      ] },
+    options: { responsive:true, maintainAspectRatio:false, interaction:{mode:'index'}, plugins:{legend:{position:'top'}},
+      scales: { x: commonScales.x, y: commonScales.y, y1: { type:'linear', position:'right', grid:{drawOnChartArea:false}, ticks:{font:{family:"'Nunito', sans-serif"}} } } }
+  });
+}
+
+async function loadCorrelation() {
+  const r = await fetch('/api/correlation'); const data = await r.json(); const badgesEl = document.getElementById('corr-badges');
+  data.forEach(item => {
+    const abs = Math.abs(item.correlation); const cls = abs > 0.6 ? 'corr-high' : abs > 0.3 ? 'corr-mid' : 'corr-low';
+    const label = abs > 0.6 ? 'Alta' : abs > 0.3 ? 'Moderada' : 'Baja';
+    let sigIcon = '';
+    if(item.p_value !== undefined) { sigIcon = item.significant ? '<i class="bi bi-check-circle-fill text-success" title="Significativo"></i>' : '<i class="bi bi-exclamation-triangle-fill text-warning" title="No significativo"></i>'; }
+    badgesEl.innerHTML += `<span class="corr-badge ${cls}">${item.year}: r = ${item.correlation} (${label}) ${sigIcon}</span>`;
+  });
+  if (chartCorr) chartCorr.destroy();
+  chartCorr = new Chart(document.getElementById('chartCorr'), {
+    type: 'line', data: { labels: data.map(d => d.year), datasets: [{ label: 'Pearson r', data: data.map(d => d.correlation), borderColor: '#f6c23e', backgroundColor: 'rgba(246, 194, 62, 0.2)', tension: 0.4, pointRadius: 6, fill: true }] },
+    options: { responsive:true, maintainAspectRatio:false, scales: { x: commonScales.x, y: { ...commonScales.y, min:-1, max:1 } } }
+  });
+}
+
+async function runCompare() {
+  const cmpInd = document.getElementById('cmp-ind').value;
+  const r = await fetch('/api/compare', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ depto1: document.getElementById('cmp-d1').value, depto2: document.getElementById('cmp-d2').value, year: document.getElementById('cmp-year').value, indicator: cmpInd }) });
+  const j = await r.json();
+
+  // Extraer solo los años únicos para ponerlos limpios en el eje X
+  const allYears = [...new Set([...j.depto1.data, ...j.depto2.data].map(d => d.year || 'Promedio'))].sort();
+  
+  // Alinear los datos de cada departamento con su año correspondiente
+  const mapData = (dataArr) => allYears.map(y => {
+    const row = dataArr.find(d => (d.year || 'Promedio') == y);
+    return row && row.values ? row.values[cmpInd] : null;
+  });
+
+  if (chartCompare) chartCompare.destroy();
+  chartCompare = new Chart(document.getElementById('chartCompare'), {
+    type: 'bar',
+    data: {
+      labels: allYears, // Ahora el eje X dirá solo "2023", "2024", etc.
+      datasets: [
+        { label: j.depto1.name, data: mapData(j.depto1.data), backgroundColor: '#4e73df', borderRadius: 6, borderSkipped: false },
+        { label: j.depto2.name, data: mapData(j.depto2.data), backgroundColor: '#1cc88a', borderRadius: 6, borderSkipped: false }
+      ]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales: commonScales }
+  });
+}
+
+function exportTableToCSV(filename) {
+    let csv = []; let rows = document.querySelectorAll("#main-table tr");
+    for (let i = 0; i < rows.length; i++) {
+        let row = [], cols = rows[i].querySelectorAll("td, th");
+        for (let j = 0; j < cols.length; j++) row.push('"' + cols[j].innerText.replace(/"/g, '""') + '"');
+        csv.push(row.join(","));
+    }
+    let csvFile = new Blob([csv.join("\n")], {type: "text/csv"});
+    let downloadLink = document.createElement("a");
+    downloadLink.download = filename; downloadLink.href = window.URL.createObjectURL(csvFile);
+    downloadLink.style.display = "none"; document.body.appendChild(downloadLink); downloadLink.click();
+}
+
+function fmt(v) { return v != null ? Number(v).toFixed(1) : '–'; }
+function fmtInt(v) { return v != null ? Number(v).toLocaleString('es-CO') : '–'; }
+</script>
+</body>
+</html>
